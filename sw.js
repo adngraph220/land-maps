@@ -1,5 +1,5 @@
 // Land Maps service worker — app shell precache + per-city packs in Cache Storage
-const SHELL = 'shell-v1';
+const SHELL = 'shell-v2';
 const SHELL_FILES = ['./', './index.html', './leaflet.js', './leaflet.css', './manifest.json',
   './icons/icon-180.png', './icons/icon-192.png', './icons/icon-512.png'];
 

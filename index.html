@@ -169,7 +169,7 @@ async function openCity(id){
   (pack.areas||[]).forEach(a=>{
     const color=COLORS[a.tier]||'#555';
     const c = a.polygon ? L.polygon(a.polygon,{color,weight:3,fillOpacity:0}) : L.circle(a.center,{radius:a.radius_m,color,weight:3,dashArray:a.tier==='watch'?'6 6':null,fillOpacity:0});
-    const jb = a.juris==='bmc'?'<span class="jb jb-bmc">BMC</span>':a.juris==='panchayat'?'<span class="jb jb-pan">GRAM PANCHAYAT</span>':a.juris?'<span class="jb jb-ver">VERIFY</span>':'';
+    const jb = a.juris==='bmc'?'<span class="jb jb-bmc">MUNICIPAL</span>':a.juris==='panchayat'?'<span class="jb jb-pan">GRAM PANCHAYAT</span>':a.juris?'<span class="jb jb-ver">VERIFY</span>':'';
     const warn = a.juris==='panchayat'?'<div class="warn">⚠️ Outside municipal limits: no municipal water/sewer, panchayat tax & roads, smaller resale pool. Must be TNCP-approved + diverted.</div>':a.juris==='verify'?'<div class="warn">❓ Ask seller: municipal ward or Gram Panchayat? Diversion done?</div>':'';
     c.bindPopup(`<div style="min-width:230px"><b style="font-size:14px">${a.name}</b> ${jb}<br><span style="color:#555">${a.note||''}</span><hr>
       <b>Price:</b> ${a.price||'—'}<br><span style="color:#555">${a.example||''}</span>${RK?`<hr><b>🚉 ${RK.name.split(' (')[0]}:</b> ${a.rkmp_km} km · ~${a.rkmp_road_km} km road<br><b>🚉 ${(pack.stations[1]||{}).name?pack.stations[1].name.split(' (')[0]:''}:</b> ${a.bpl_km} km · ~${a.bpl_road_km} km road`:''}
