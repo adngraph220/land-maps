@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Land Maps</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<meta name="theme-color" content="#1a9c3e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Land Maps">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="stylesheet" href="leaflet.css">
+<style>
+:root{--g:#1a9c3e;--a:#e08a00;--b:#1d4ed8}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;font-family:-apple-system,system-ui,Segoe UI,Roboto,sans-serif;background:#f2efe9;color:#222;-webkit-tap-highlight-color:transparent}
+#home{position:fixed;inset:0;overflow:auto;padding:max(16px,env(safe-area-inset-top)) 16px 24px;background:#f7f5f0}
+#home h1{margin:8px 0 2px;font-size:26px}
+#home .sub{color:#666;font-size:14px;margin-bottom:18px}
+.city{background:#fff;border-radius:14px;padding:14px 16px;margin:10px 0;box-shadow:0 1px 4px rgba(0,0,0,.08);display:flex;align-items:center;gap:12px}
+.city .nm{font-weight:700;font-size:17px}.city .st{color:#777;font-size:13px}
+.city .sp{flex:1}
+.btn{border:0;border-radius:10px;padding:10px 14px;font-size:14px;font-weight:600;background:var(--g);color:#fff}
+.btn.sec{background:#eee;color:#333}.btn.del{background:#fee2e2;color:#991b1b}
+.badge{font-size:11px;font-weight:700;padding:2px 7px;border-radius:5px;background:#dcfce7;color:#166534}
+.prog{height:6px;background:#eee;border-radius:3px;overflow:hidden;margin-top:8px}.prog i{display:block;height:100%;background:var(--g);width:0}
+.tip{background:#fff7ed;border-left:3px solid #f59e0b;padding:8px 10px;border-radius:6px;font-size:13px;margin-top:16px;color:#7c2d12}
+#mapview{position:fixed;inset:0;display:none}
+#map{position:absolute;inset:0}
+#bar{position:absolute;top:max(10px,env(safe-area-inset-top));left:10px;z-index:1000;background:rgba(255,255,255,.96);border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.2);padding:8px 12px;font-size:13px;line-height:1.35;max-width:270px}
+#bar b{font-size:14px}
+#legend div{display:flex;align-items:center;gap:6px;margin:3px 0}
+#legend i{width:14px;height:14px;border-radius:50%;display:inline-block;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.3)}
+.lbl{background:rgba(255,255,255,.9);border:1px solid #999;border-radius:4px;padding:2px 5px;font-size:11px;font-weight:600;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.lbl.shortlist{border-color:var(--g);color:#136b2c}.lbl.watch{border-color:var(--a);color:#8a5200}
+.stn{width:28px;height:28px;border-radius:50%;background:var(--b);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 1px 4px rgba(0,0,0,.4);border:2px solid #fff}
+.leaflet-popup-content{font-size:13px;line-height:1.4;margin:10px 12px}
+.leaflet-popup-content hr{border:0;border-top:1px solid #e5e5e5;margin:6px 0}
+.jb{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;vertical-align:middle;letter-spacing:.3px}.jb-bmc{background:#dbeafe;color:#1e3a8a}.jb-pan{background:#fef3c7;color:#92400e}.jb-ver{background:#fee2e2;color:#991b1b}
+.warn{margin-top:6px;background:#fff7ed;border-left:3px solid #f59e0b;padding:5px 7px;font-size:12px;color:#7c2d12;border-radius:3px}
+.leaflet-control-attribution{font-size:10px}
+#coord{background:rgba(255,255,255,.9);padding:3px 6px;border-radius:6px;font-size:11px;font-family:monospace}
+.pin{width:14px;height:14px;border-radius:50%;background:#dc2626;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.4)}
+</style>
+</head>
+<body>
+
+<div id="home">
+  <h1>Land Maps</h1>
+  <div class="sub">Offline city maps for land scouting · tap a city to download once, then it's instant</div>
+  <div id="cities"></div>
+  <div id="installTip" class="tip" style="display:none">📲 For the app experience: Safari → Share → <b>Add to Home Screen</b>. Maps stay stored on this device.</div>
+  <div style="color:#999;font-size:11px;margin-top:20px" id="ver"></div>
+</div>
+
+<div id="mapview">
+  <div id="map"></div>
+  <div id="bar">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <b id="title">—</b>
+      <span><button id="pinBtn" class="btn sec" style="padding:2px 8px;font-size:12px" title="Drop a pin">📍</button>
+      <button id="tog" class="btn sec" style="padding:2px 8px;font-size:12px">−</button>
+      <button id="back" class="btn sec" style="padding:2px 8px;font-size:12px">✕</button></span>
+    </div>
+    <div id="legend" style="margin-top:6px"></div>
+  </div>
+</div>
+
+<script src="leaflet.js"></script>
+<script>
+// ---------- helpers ----------
+const $ = s => document.querySelector(s);
+const COLORS = {shortlist:'#1a9c3e', watch:'#e08a00'};
+const fmtMB = b => (b/1e6).toFixed(1)+' MB';
+const cityCache = id => 'city-'+id;
+
+// ---------- service worker ----------
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+const standalone = window.navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+if (!standalone && /iPhone|iPad|iPod/.test(navigator.userAgent)) $('#installTip').style.display='block';
+
+// ---------- home: city list ----------
+async function isDownloaded(id){ const c = await caches.open(cityCache(id)); const keys = await c.keys(); return keys.length; }
+async function cachedBytes(id){ const c = await caches.open(cityCache(id)); let n=0; for (const k of await c.keys()){ const r=await c.match(k); n += +(r.headers.get('content-length')||0) || (await r.clone().blob()).size; } return n; }
+
+async function renderHome(){
+  let idx;
+  try { idx = await (await fetch('cities/index.json', {cache:'no-cache'})).json(); }
+  catch { idx = JSON.parse(localStorage.getItem('cityIndex')||'{"cities":[]}'); }
+  localStorage.setItem('cityIndex', JSON.stringify(idx));
+  const box = $('#cities'); box.innerHTML='';
+  for (const c of idx.cities){
+    const dl = await isDownloaded(c.id);
+    const el = document.createElement('div'); el.className='city';
+    el.innerHTML = `<div class="sp"><div class="nm">${c.name} ${dl?'<span class="badge">OFFLINE ✓</span>':''}</div>
+      <div class="st">${c.state} · ${c.size_mb} MB · updated ${c.updated}</div><div class="prog" style="display:none"><i></i></div></div>
+      ${dl ? `<button class="btn" data-open="${c.id}">Open</button><button class="btn del" data-del="${c.id}">🗑</button>`
+           : `<button class="btn" data-dl="${c.id}">Download</button>`}`;
+    box.appendChild(el);
+  }
+  const est = navigator.storage && navigator.storage.estimate ? await navigator.storage.estimate() : null;
+  $('#ver').textContent = 'v1 · ' + (est ? `storage used ${fmtMB(est.usage)} of ${fmtMB(est.quota)}` : '');
+}
+$('#cities').addEventListener('click', async e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.dl) await downloadCity(b.dataset.dl, b.closest('.city'));
+  if (b.dataset.open) openCity(b.dataset.open);
+  if (b.dataset.del) { if (confirm('Remove this city from your device?')) { await caches.delete(cityCache(b.dataset.del)); renderHome(); } }
+});
+
+async function downloadCity(id, el){
+  const prog = el.querySelector('.prog'), bar = prog.querySelector('i'); prog.style.display='block';
+  const btn = el.querySelector('button'); btn.disabled = true; btn.textContent='Downloading…';
+  try {
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{});
+    const cache = await caches.open(cityCache(id));
+    const packUrl = `cities/${id}/pack.json`;
+    const packRes = await fetch(packUrl, {cache:'no-cache'}); const pack = await packRes.clone().json();
+    await cache.put(packUrl, packRes);
+    const files = pack.files.filter(f => f !== 'pack.json');
+    for (let i=0;i<files.length;i++){
+      const u = `cities/${id}/${files[i]}`;
+      const r = await fetch(u, {cache:'no-cache'}); if (!r.ok) throw new Error(u+' '+r.status);
+      await cache.put(u, r);
+      bar.style.width = Math.round((i+1)/files.length*100)+'%';
+    }
+    renderHome();
+  } catch(err){ btn.disabled=false; btn.textContent='Retry'; alert('Download failed: '+err.message); }
+}
+
+// ---------- map view ----------
+let map, sheetLayer, areaLayer, labelLayer, lineLayer, stationLayer, pinLayer, curCity, pinMode=false;
+async function openCity(id){
+  const cache = await caches.open(cityCache(id));
+  const packRes = await cache.match(`cities/${id}/pack.json`); if (!packRes) return alert('Not downloaded');
+  const pack = await packRes.json(); curCity = id;
+  $('#home').style.display='none'; $('#mapview').style.display='block'; location.hash = id;
+  $('#title').textContent = pack.name + ' — Land Map';
+  if (map) { map.remove(); map = null; }
+  map = L.map('map', {minZoom:11, maxZoom:17, zoomSnap:0.5, zoomDelta:0.5, maxBounds:L.latLngBounds(pack.bounds).pad(0.05), maxBoundsViscosity:0.8})
+         .setView(pack.center, pack.zoom);
+  // sheets from cache → object URLs
+  const imgs = {};
+  for (const z of Object.keys(pack.sheets)){
+    const r = await cache.match(`cities/${id}/sheets/z${z}.png`); const im = new Image();
+    im.src = URL.createObjectURL(await r.blob()); imgs[z] = im;
+  }
+  const HAS = {}; Object.keys(pack.present||{}).forEach(z => HAS[z] = new Set(pack.present[z]));
+  const Sheet = L.GridLayer.extend({ createTile(coords, done){
+    const c=document.createElement('canvas'); c.width=c.height=256; const ctx=c.getContext('2d');
+    let z=coords.z, x=coords.x, y=coords.y, scale=1, ox=0, oy=0;
+    const has=(z,x,y)=>{ const m=pack.sheets[z]; if(!m) return false; if(x<m.xmin||x>m.xmax||y<m.ymin||y>m.ymax) return false; return HAS[z] ? HAS[z].has(x+'/'+y) : true; };
+    while(z>=11 && !has(z,x,y)){ ox=(ox+(x&1)*256)/2; oy=(oy+(y&1)*256)/2; x>>=1; y>>=1; z--; scale*=2; }
+    if(z<11){ setTimeout(()=>done(null,c),0); return c; }
+    const m=pack.sheets[z], im=imgs[z];
+    const draw=()=>{ ctx.drawImage(im,(x-m.xmin)*256+ox,(y-m.ymin)*256+oy,256/scale,256/scale,0,0,256,256); setTimeout(()=>done(null,c),0); };
+    if(im.complete && im.naturalWidth) draw(); else { im.addEventListener('load',draw,{once:true}); im.addEventListener('error',()=>setTimeout(()=>done(null,c),0),{once:true}); }
+    return c; }});
+  sheetLayer = new Sheet({minZoom:11, maxZoom:17, maxNativeZoom:15, minNativeZoom:11, attribution:pack.attribution}).addTo(map);
+  L.control.scale({imperial:false}).addTo(map);
+
+  // overlays
+  const label=(ll,t,cls)=>L.marker(ll,{icon:L.divIcon({className:'',html:`<span class="lbl ${cls||''}">${t}</span>`,iconAnchor:[0,0]}),interactive:false});
+  stationLayer = L.layerGroup().addTo(map); areaLayer = L.layerGroup().addTo(map); labelLayer = L.layerGroup(); lineLayer = L.layerGroup(); pinLayer = L.layerGroup().addTo(map);
+  (pack.stations||[]).forEach(s=>{ L.marker(s.pos,{icon:L.divIcon({className:'',html:'<div class="stn">🚉</div>',iconSize:[28,28],iconAnchor:[14,14]})}).bindPopup(`<b>${s.name}</b>`).addTo(stationLayer); label([s.pos[0]+0.004,s.pos[1]], s.name.split(' (')[0]).addTo(stationLayer); });
+  const RK = (pack.stations||[])[0];
+  (pack.areas||[]).forEach(a=>{
+    const color=COLORS[a.tier]||'#555';
+    const c = a.polygon ? L.polygon(a.polygon,{color,weight:3,fillOpacity:0}) : L.circle(a.center,{radius:a.radius_m,color,weight:3,dashArray:a.tier==='watch'?'6 6':null,fillOpacity:0});
+    const jb = a.juris==='bmc'?'<span class="jb jb-bmc">BMC</span>':a.juris==='panchayat'?'<span class="jb jb-pan">GRAM PANCHAYAT</span>':a.juris?'<span class="jb jb-ver">VERIFY</span>':'';
+    const warn = a.juris==='panchayat'?'<div class="warn">⚠️ Outside municipal limits: no municipal water/sewer, panchayat tax & roads, smaller resale pool. Must be TNCP-approved + diverted.</div>':a.juris==='verify'?'<div class="warn">❓ Ask seller: municipal ward or Gram Panchayat? Diversion done?</div>':'';
+    c.bindPopup(`<div style="min-width:230px"><b style="font-size:14px">${a.name}</b> ${jb}<br><span style="color:#555">${a.note||''}</span><hr>
+      <b>Price:</b> ${a.price||'—'}<br><span style="color:#555">${a.example||''}</span>${RK?`<hr><b>🚉 ${RK.name.split(' (')[0]}:</b> ${a.rkmp_km} km · ~${a.rkmp_road_km} km road<br><b>🚉 ${(pack.stations[1]||{}).name?pack.stations[1].name.split(' (')[0]:''}:</b> ${a.bpl_km} km · ~${a.bpl_road_km} km road`:''}
+      ${a.juris_note?`<hr><b>🏛 ${a.juris_note}</b>`:''}${warn}</div>`).addTo(areaLayer);
+    const ctr = a.polygon ? c.getBounds().getCenter() : L.latLng(a.center[0]+a.radius_m/111000, a.center[1]);
+    labelLayer.addLayer(label(ctr, a.name, a.tier));
+    if (RK && a.rkmp_km) L.polyline([a.center||c.getBounds().getCenter(), RK.pos],{color,weight:1.5,dashArray:'3 5',opacity:.7,interactive:false}).addTo(lineLayer);
+  });
+  const syncLabels=()=>{ map.getZoom()>=13 ? labelLayer.addTo(map) : map.removeLayer(labelLayer); }; map.on('zoomend',syncLabels); syncLabels();
+
+  // legend
+  $('#legend').innerHTML = `<div><i style="background:${COLORS.shortlist}"></i><span>Shortlist</span></div><div><i style="background:${COLORS.watch}"></i><span>Watch-list</span></div>
+    <div><i style="background:#1d4ed8;border-radius:3px"></i><span>Railway station</span></div><div><i class="pin" style="border-radius:50%"></i><span>My pins (📍 then tap map)</span></div>
+    <div style="margin-top:5px"><label><input type="checkbox" id="showLines"> Distance lines</label></div>
+    <div style="color:#777;font-size:11px;margin-top:3px">Tap an outline → price · distance · jurisdiction</div>`;
+  $('#showLines').onchange = e => e.target.checked ? lineLayer.addTo(map) : map.removeLayer(lineLayer);
+  const setLegend = o => { $('#legend').style.display = o?'block':'none'; $('#tog').textContent = o?'−':'+'; };
+  $('#tog').onclick = () => setLegend($('#legend').style.display==='none');
+  if (innerWidth < 600) setLegend(false); map.on('popupopen', ()=>{ if (innerWidth<600) setLegend(false); });
+
+  // coords + pins (saved per city on device)
+  const cb = L.control({position:'bottomleft'}); cb.onAdd=()=>{ const d=L.DomUtil.create('div'); d.id='coord'; d.textContent='tap map for lat,lon'; return d; }; cb.addTo(map);
+  const pins = JSON.parse(localStorage.getItem('pins-'+id)||'[]');
+  const drawPin = p => L.marker(p.pos,{icon:L.divIcon({className:'',html:'<div class="pin"></div>',iconSize:[14,14],iconAnchor:[7,7]})}).bindPopup(`<b>${p.name}</b><br><small>${p.pos[0].toFixed(5)}, ${p.pos[1].toFixed(5)}</small><br><button onclick="delPin(${p.t})" style="margin-top:4px">Delete pin</button>`).addTo(pinLayer);
+  pins.forEach(drawPin);
+  window.delPin = t => { const arr = JSON.parse(localStorage.getItem('pins-'+id)||'[]').filter(p=>p.t!==t); localStorage.setItem('pins-'+id, JSON.stringify(arr)); pinLayer.clearLayers(); arr.forEach(drawPin); map.closePopup(); };
+  $('#pinBtn').onclick = () => { pinMode = !pinMode; $('#pinBtn').style.background = pinMode ? '#fecaca' : '#eee'; };
+  map.on('click', e => {
+    $('#coord').textContent = e.latlng.lat.toFixed(5)+', '+e.latlng.lng.toFixed(5);
+    if (pinMode) { const name = prompt('Pin name?','Plot') || 'Pin'; const p = {name, pos:[e.latlng.lat,e.latlng.lng], t:Date.now()}; const arr = JSON.parse(localStorage.getItem('pins-'+id)||'[]'); arr.push(p); localStorage.setItem('pins-'+id, JSON.stringify(arr)); drawPin(p); pinMode=false; $('#pinBtn').style.background='#eee'; }
+  });
+}
+$('#back').onclick = () => { $('#mapview').style.display='none'; $('#home').style.display='block'; location.hash=''; renderHome(); };
+
+// ---------- boot ----------
+renderHome().then(async () => { const h = location.hash.slice(1); if (h && await isDownloaded(h)) openCity(h); });
+</script>
+</body>
+</html>
